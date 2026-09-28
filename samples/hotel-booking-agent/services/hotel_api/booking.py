@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,8 +12,13 @@ from fastapi import APIRouter, HTTPException, status
 
 logger = logging.getLogger(__name__)
 
-DATA_PATH = Path(__file__).resolve().parent / "storage" / "bookings.json"
-DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+# The app's own directory can be read-only in deployed environments, so the
+# bookings store defaults to /tmp (writable even on a read-only root fs).
+DATA_PATH = Path(os.environ.get("BOOKINGS_DATA_DIR", "/tmp/hotel_api")) / "bookings.json"
+try:
+    DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+except OSError:
+    logger.exception("Failed to create bookings storage directory at %s", DATA_PATH.parent)
 
 router = APIRouter()
 
